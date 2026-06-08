@@ -3,7 +3,6 @@ using Game.Player;
 using UnityEditor;
 using UnityEngine.Rendering;
 using Cysharp.Threading.Tasks;
-using System;
 
 namespace Game.Player
 {
@@ -13,6 +12,10 @@ namespace Game.Player
         [SerializeField] bool _isChangeOffset;
         [SerializeField] Vector3 _offset;
         Vector3 _currentPos;
+        Vector3 _currentOffset;
+        Vector3 _baseOffset;
+        Quaternion _targetRot;
+        float _rotateSpeed;
 
         private void OnValidate()
         {
@@ -35,13 +38,38 @@ namespace Game.Player
         }
         void CameraMove()
         {
-            _currentPos = _player.transform.position + _offset;
+            // プレイヤー回転後の理想Offsetを計算
+            var targetOffset = _targetRot * _baseOffset;
+
+            // 現在のOffsetを目標Offsetへ徐々に補間
+            _currentOffset = Vector3.RotateTowards(
+                _currentOffset,
+                targetOffset,
+                //ラジアン/フレーム
+                _rotateSpeed * Mathf.Deg2Rad * Time.deltaTime,
+                0f
+            );
+
+            // プレイヤーの後方にカメラを配置
+            _currentPos = _player.transform.position - _currentOffset;
             transform.position = _currentPos;
+
+            // カメラの回転も徐々に補間
+            transform.rotation = Quaternion.RotateTowards(
+                transform.rotation,
+                _targetRot,
+                _rotateSpeed * Time.deltaTime
+            );
         }
 
         void Initialize()
         {
-            if (_player != null) _player.OnRotatePlayerAsync = RotateCameraAsync;
+            if (_player == null) return;
+
+            _targetRot = _player.transform.rotation;
+            _baseOffset = Quaternion.Inverse(_targetRot) * _offset;
+            _currentOffset = _offset;
+            _player.OnRotatePlayerAsync = RotateCameraAsync;
         }
         // エディタ表示が更新されるたびに呼ばれる特殊な関数
         private void OnDrawGizmos()
@@ -54,18 +82,11 @@ namespace Game.Player
         }
 
         //Playerが回転したときに呼ばれる関数
-        async UniTask RotateCameraAsync(Quaternion targetRot, float rotateSpeed)
+        UniTask RotateCameraAsync(Quaternion targetRot, float rotateSpeed)
         {
-            try
-            {
-                await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken: this.GetCancellationTokenOnDestroy());
-            }
-            catch (OperationCanceledException) { return; }
-            transform.rotation = Quaternion.RotateTowards(
-                transform.rotation,
-                targetRot,
-                rotateSpeed * Time.deltaTime
-                );
+            _targetRot = targetRot;
+            _rotateSpeed = rotateSpeed;
+            return UniTask.CompletedTask;
         }
         void ChangeOffset()
         {

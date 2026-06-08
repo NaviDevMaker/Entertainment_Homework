@@ -3,65 +3,67 @@ using UnityEngine.InputSystem;
 
 namespace Game.Player
 {
-    public sealed class PlayerMovement : MonoBehaviour
-    {
-        PlayerController _player;
-        Animator _animator;
+    public sealed class PlayerMovement : PlayerBehaviourBase
+    {      
         Vector2 _moveInput;
         Vector3 _currentDir;
+        Rigidbody _rigidbody;
+        [Header("The Player Rotate Speed")]
+        [SerializeField,Range(0,200)] float _rotateSpeed = 20f;
 
-        readonly int _walkHash = Animator.StringToHash("isWalking");
-        [SerializeField] float _rotateSpeed = 20;
+        [Header("The Player Speed")]
+        [SerializeField, Range(1, 100)] float _moveSpeed = 20f;
 
-        private void Awake()
+        protected override void Initialize()
         {
-            Initialize();
-        }
-
-        void Initialize()
-        {
-            SetAnimator();
-        }
-
-        void SetAnimator()
-        {
-            var rootObj = gameObject;
-
-            while (rootObj.transform.parent != null)
+            base.Initialize();
+            if (_player == null) return;
+            if (!_player.TryGetComponentInParent<Rigidbody>(out var rigidbody))
             {
-                rootObj = rootObj.transform.parent.gameObject;
+                throw new System.Exception("The RIGIDBPDY is NULL!!");
             }
-
-            _player = rootObj.GetComponent<PlayerController>();
-            _animator = rootObj.GetComponent<Animator>();
-            if (_player == null || _animator == null) throw new System.Exception("Player or Animator is NULL!!");
+            _rigidbody = rigidbody;
         }
-
         public void Move()
         {
-            _animator.SetBool(_walkHash, true);
+            if (_rigidbody == null) return;
+            var nextPos = _rigidbody.position + (_rigidbody.rotation * Vector3.forward) * _moveSpeed * Time.deltaTime;
+            _rigidbody.MovePosition(nextPos);
         }
 
-        public void CancelMove()
-        {
-            _animator.SetBool(_walkHash, false);
-        }
+        public void UpdateAnimator()
+            => _animator.SetBool(PlayerAnimatorHashes.walkHash, true);
 
+ 
         public void OnMove(InputAction.CallbackContext context)
-            => _moveInput = context.ReadValue<Vector2>();
+
+        {
+            Debug.Log("OnMove");
+            _moveInput = context.ReadValue<Vector2>();
+        }
 
         public void Rotate(out Quaternion targetRot)
         {
+            if (_rigidbody == null)
+            {
+                targetRot = _player.transform.rotation;
+                return;
+            }
+
             targetRot = Quaternion.LookRotation(_currentDir, Vector3.up);
-            _player.transform.rotation = Quaternion.RotateTowards(
-                _player.transform.rotation,
+            var nextRot = Quaternion.RotateTowards(
+                _rigidbody.rotation,
                 targetRot,
                 _rotateSpeed * Time.deltaTime
                 );
+            _rigidbody.MoveRotation(nextRot);
         }
 
         public Vector2 GetMoveInput()
             => _moveInput;
+
+        public bool IsMovable()
+            => _moveInput.sqrMagnitude > 0.0001f;
 
         public float GetRotateSpeed()
             => _rotateSpeed;

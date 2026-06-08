@@ -6,35 +6,33 @@ namespace Game.Player
 {
     public sealed class MoveState : StateBase<PlayerController>,IMoveState<PlayerController>
     {
-        public void Move(PlayerController owner)
+        public MoveState(PlayerController owner):base(owner) { }
+        public void Move()
         {
-            owner.PlayerComponent.PlayerMovement.Move();
+            Owner.PlayerComponent.PlayerMovement.Move();
         }
-
         public override void OnEnter()
         {
-           
+            Owner.PlayerComponent.PlayerMovement.UpdateAnimator();
         }
-
         public override void OnExit()
         {
             
         } 
-
-        public override void OnUpdate(PlayerController owner)
+        public override void OnUpdate()
         {
-            var movement = owner.PlayerComponent.PlayerMovement;
+            var movement = Owner.PlayerComponent.PlayerMovement;
             var moveInput = movement.GetMoveInput();
 
-            if(movement.IsRotatable(moveInput))
+            if (movement.IsRotatable(moveInput))
             {
                 var targetRot = default(Quaternion);
                 movement.Rotate(out targetRot);
-                owner.OnRotatePlayerAsync(targetRot, movement.GetRotateSpeed()).Forget();
-                Move(owner);
+                Move();
+                Owner.OnRotatePlayerAsync(targetRot, movement.GetRotateSpeed()).Forget();
             }
+            else Owner.StateMachine.ChangeState(StateType.Idle);
         }
-
     }
 }
 

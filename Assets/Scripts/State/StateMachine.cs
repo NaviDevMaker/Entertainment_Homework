@@ -22,9 +22,10 @@ namespace Game.Creature
             _currentState.OnEnter();
         }
 
-        public void OnUpdate(PlayerController owner)
+        public void OnUpdate()
         {
-            _currentState?.OnUpdate(owner);
+            Debug.Log($"currentState:{_currentState}");
+            _currentState?.OnUpdate();
         }
         IState<PlayerController> GetState(StateType nextState)
         {

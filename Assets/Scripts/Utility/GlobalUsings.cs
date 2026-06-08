@@ -1,2 +1,2 @@
-global using Game.Extention;
+global using Game.Extension;
 

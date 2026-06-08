@@ -6,11 +6,12 @@ namespace Game.Creature
 {
 
     public interface IIdleState { };
-    public interface IMoveState<TOwner> { void Move(TOwner owner); };
+    public interface IMoveState<TOwner> { void Move(); };
 
     public interface IState<TOwner>
     {
-        void OnUpdate(TOwner owner);
+        TOwner Owner { get; }
+        void OnUpdate();
         void OnEnter();
         void OnExit();
     }

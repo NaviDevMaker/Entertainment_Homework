@@ -9,7 +9,7 @@ namespace Game.Player
     { 
         [field:SerializeField] public PlayerComponent PlayerComponent;    
 
-        StateMachine stateMachine;
+        public StateMachine StateMachine { get; private set; }
         public Func<Quaternion, float,UniTask> OnRotatePlayerAsync;
         // Start is called once before the first execution of OnUpdate after the MonoBehaviour is created
         void Start()
@@ -20,17 +20,17 @@ namespace Game.Player
         // OnUpdate is called once per frame
         void Update()
         {
-            stateMachine.OnUpdate(this);
+            StateMachine.OnUpdate();
         }
 
         void Initialize()
         {
-            stateMachine = new StateMachine
+            StateMachine = new StateMachine
                 (
-                    new IdleState(),
-                    new MoveState()
+                    new IdleState(this),
+                    new MoveState(this)
                 );
-            stateMachine.ChangeState(StateType.Idle);
+            StateMachine.ChangeState(StateType.Idle);
         }
     }
 
@@ -38,6 +38,7 @@ namespace Game.Player
     public class PlayerComponent
     {
         [field: SerializeField] public PlayerMovement PlayerMovement;
+        [field: SerializeField] public PlayerIdleBehaviour PlayerIdleBehaviour;
     }
 }
 
